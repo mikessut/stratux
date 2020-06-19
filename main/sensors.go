@@ -139,7 +139,7 @@ func initIMU() (ok bool) {
 func sensorAttitudeSender() {
 	var (
 		t                    time.Time
-		roll, pitch, heading float64
+		//roll, pitch, heading float64
 		mpuError, magError   error
 		failNum              uint8
 	)
@@ -268,10 +268,24 @@ func sensorAttitudeSender() {
 				}
 			}
 
+			// Raw IMU mod. Send IMU over in mySituation
+			mySituation.muAttitude.Lock()
+			mySituation.gx = m.B1
+			mySituation.gy = m.B2
+			mySituation.gz = m.B3
+
+			mySituation.ax = m.A1
+			mySituation.ay = m.A2
+			mySituation.az = m.A3
+
+			mySituation.mx = m.M1
+			mySituation.my = m.M2
+			mySituation.mz = m.M3
 			// Run the AHRS calculations.
-			s.Compute(m)
+			//s.Compute(m)
 
 			// If we have valid AHRS info, then update mySituation.
+			/*
 			mySituation.muAttitude.Lock()
 			if s.Valid() {
 				roll, pitch, heading = s.RollPitchHeading()
@@ -309,8 +323,11 @@ func sensorAttitudeSender() {
 				s.Reset()
 			}
 			mySituation.muAttitude.Unlock()
+			*/
 
+			//fmt.Println(mySituation.gx)
 			makeAHRSGDL90Report() // Send whether or not valid - the function will invalidate the values as appropriate
+			mySituation.muAttitude.Unlock()
 
 			// Send to AHRS debugging server.
 			if ahrswebListener != nil {

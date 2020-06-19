@@ -24,6 +24,8 @@ import (
 
 	"os"
 	"os/exec"
+
+	"encoding/binary"
 )
 
 const (
@@ -98,6 +100,17 @@ type SituationData struct {
 	AHRSGLoadMax         float64
 	AHRSLastAttitudeTime time.Time
 	AHRSStatus           uint8
+
+	// Raw IMU
+	gx float64
+	gy float64
+	gz float64
+	ax float64
+	ay float64
+	az float64
+	mx float64
+	my float64
+	mz float64
 }
 
 /*
@@ -1922,22 +1935,23 @@ func ffAttitudeSender() {
 }
 
 func makeAHRSGDL90Report() {
-	msg := make([]byte, 24)
+	msg := make([]byte, 40)
 	msg[0] = 0x4c
 	msg[1] = 0x45
 	msg[2] = 0x01
 	msg[3] = 0x01
 
 	// Values if invalid
-	pitch := int16(0x7FFF)
-	roll := int16(0x7FFF)
-	hdg := int16(0x7FFF)
-	slip_skid := int16(0x7FFF)
-	yaw_rate := int16(0x7FFF)
-	g := int16(0x7FFF)
-	airspeed := int16(0x7FFF) // Can add this once we can read airspeed
-	palt := uint16(0xFFFF)
-	vs := int16(0x7FFF)
+	//pitch := int16(0x7FFF)
+	//roll := int16(0x7FFF)
+	//hdg := int16(0x7FFF)
+	//slip_skid := int16(0x7FFF)
+	//yaw_rate := int16(0x7FFF)
+	//g := int16(0x7FFF)
+	//airspeed := int16(0x7FFF) // Can add this once we can read airspeed
+	//palt := uint16(0xFFFF)
+	//vs := int16(0x7FFF)
+	/*
 	if isAHRSValid() {
 		if !isAHRSInvalidValue(mySituation.AHRSPitch) {
 			pitch = roundToInt16(mySituation.AHRSPitch * 10)
@@ -1962,46 +1976,19 @@ func makeAHRSGDL90Report() {
 		palt = uint16(mySituation.BaroPressureAltitude + 5000.5)
 		vs = roundToInt16(float64(mySituation.BaroVerticalSpeed))
 	}
+	*/
 
-	// Roll.
-	msg[4] = byte((roll >> 8) & 0xFF)
-	msg[5] = byte(roll & 0xFF)
+	binary.LittleEndian.PutUint32(msg[4:8], math.Float32bits(float32(mySituation.gx)))
+	binary.LittleEndian.PutUint32(msg[8:12], math.Float32bits(float32(mySituation.gy)))
+	binary.LittleEndian.PutUint32(msg[12:16], math.Float32bits(float32(mySituation.gz)))
 
-	// Pitch.
-	msg[6] = byte((pitch >> 8) & 0xFF)
-	msg[7] = byte(pitch & 0xFF)
+	binary.LittleEndian.PutUint32(msg[16:20], math.Float32bits(float32(mySituation.ax)))
+	binary.LittleEndian.PutUint32(msg[20:24], math.Float32bits(float32(mySituation.ay)))
+	binary.LittleEndian.PutUint32(msg[24:28], math.Float32bits(float32(mySituation.az)))
 
-	// Heading.
-	msg[8] = byte((hdg >> 8) & 0xFF)
-	msg[9] = byte(hdg & 0xFF)
-
-	// Slip/skid.
-	msg[10] = byte((slip_skid >> 8) & 0xFF)
-	msg[11] = byte(slip_skid & 0xFF)
-
-	// Yaw rate.
-	msg[12] = byte((yaw_rate >> 8) & 0xFF)
-	msg[13] = byte(yaw_rate & 0xFF)
-
-	// "G".
-	msg[14] = byte((g >> 8) & 0xFF)
-	msg[15] = byte(g & 0xFF)
-
-	// Indicated Airspeed
-	msg[16] = byte((airspeed >> 8) & 0xFF)
-	msg[17] = byte(airspeed & 0xFF)
-
-	// Pressure Altitude
-	msg[18] = byte((palt >> 8) & 0xFF)
-	msg[19] = byte(palt & 0xFF)
-
-	// Vertical Speed
-	msg[20] = byte((vs >> 8) & 0xFF)
-	msg[21] = byte(vs & 0xFF)
-
-	// Reserved
-	msg[22] = 0x7F
-	msg[23] = 0xFF
+	binary.LittleEndian.PutUint32(msg[28:32], math.Float32bits(float32(mySituation.mx)))
+	binary.LittleEndian.PutUint32(msg[32:36], math.Float32bits(float32(mySituation.my)))
+	binary.LittleEndian.PutUint32(msg[36:40], math.Float32bits(float32(mySituation.mz)))
 
 	sendMsg(prepareMessage(msg), NETWORK_AHRS_GDL90, false)
 }
